@@ -1,0 +1,507 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r, Libraries to be installed}
+library(tidyr)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(PerformanceAnalytics)
+library(writexl)
+```
+
+```{r, Creating a flatfile}
+Dept_table <- subset(read_csv("Dept_table.csv"), select = -c(...1))
+Employee_info_table <- subset(read_csv("Employee_info_table.csv"), select = -c(...1))
+Employee_table <- subset(read_csv("Employee_table.csv"), select = -c(...1))
+EmpStatus_table <- read_csv("EmpStatus_table.csv")
+Gender_table <- subset(read_csv("Gender_table.csv"), select = -c(...1))
+Manager_name_table <- subset(read_csv("Manager_name_table.csv"), select = -c(...1))
+Marital_status_table <- subset(read_csv("Marital_status_table.csv"), select = -c(...1))
+Perf_table <-subset(read_csv("Perf_table.csv"), select = -c(...1))
+Position_table <- subset(read_csv("Position_table.csv"), select = -c(...1))
+Race_table <- subset(read_csv("Race_table.csv"), select = -c(...1))
+Recruit_table <- subset(read_csv("Recruit_table.csv"), select = -c(...1)) 
+
+df<- left_join(Employee_info_table, Dept_table, by = "DeptID") 
+df<- left_join(df, Employee_table, by = "EmpID") 
+df<- left_join(df, EmpStatus_table, by = "EmpStatusID") 
+df<- left_join(df, Gender_table, by = "GenderID") 
+df<- left_join(df, Manager_name_table, by = "ManagerID") 
+df<- left_join(df, Marital_status_table, by = "MaritalStatusID") 
+df<- left_join(df, Perf_table, by = "PerfScoreID") 
+df<- left_join(df, Position_table, by = "PositionID") 
+df<- left_join(df, Race_table, by = "RaceID") 
+df<- left_join(df, Recruit_table, by = "RecruitID")
+view(df)
+
+Employee_details <- df
+view(Employee_details)
+write.csv(Employee_details,"D:\\DataAnalytics\\Assignments\\HRAnalytics\\Final\\Employee_details.csv")
+```
+
+```{r, Converting data type of Charater variables to Factors}
+data <- Employee_details
+
+data1 <- mutate(data, State = factor(State),
+                Department = factor(Department),
+                Employee_Name = factor(Employee_Name),
+                EmploymentStatus = factor(EmploymentStatus),
+                Sex = factor(Sex),
+                ManagerName = factor(ManagerName),
+                MaritalDesc = factor(MaritalDesc),
+                PerformanceScore = factor(PerformanceScore),
+                Position = factor(Position),
+                RaceDesc = factor(RaceDesc),
+                RecruitmentSource = factor(RecruitmentSource),
+                DateofHire=factor(DateofHire),
+                LastPerformanceReview_Date=factor(LastPerformanceReview_Date),
+                DateofTermination=factor(DateofTermination))
+view(data1)
+str(data1)
+data1_correlation <- pairs(data1[,c( 4, 6, 9, 10, 11, 20, 21, 22, 23, 25, 26, 28, 29, 30, 31, 32 )], pch=19,  na.rm = TRUE)
+data1_correlation
+
+# Initial data exploration by plotting correlation with all categorical variables. No conclusions drawn.
+```
+
+```{r, Ensuring all "date" are in the same format.}
+
+head(data1$DateofHire, 20)
+data1$DateofHire = as.Date(data1$DateofHire, format = "%d/%m/%Y")
+data1$LastPerformanceReview_Date= as.Date(data1$LastPerformanceReview_Date, format = "%d/%m/%Y")
+data1$DateofTermination = as.Date(data1$DateofTermination, format = "%d/%m/%Y")
+```
+
+```{r, Correlation test with all variables}
+
+my_data <- data1[, c(1, 3, 6, 8, 9, 10, 11, 14, 16, 17, 18, 19, 20, 21, 22)]
+chart.Correlation(my_data, histogram=TRUE, pch=19, na.rm = TRUE)
+
+#Correlation with all the numerical data. Found some relations between the variables, will be exploring this further running the correlation test to find the Correlation value and the P value with 95% confidence.
+```
+
+```{r, correlation test based on correlation matrix, all under the 95% confidence interval}
+
+cor.test(data1$DeptID, data1$SpecialProjectsCount)
+cor.test(data1$DeptID, data1$Years_in_post)
+cor.test(data1$DeptID, data1$EmpStatusID)
+cor.test(data1$DeptID, data1$GenderID)
+cor.test(data1$DeptID, data1$RaceID)
+#All the P values for the above analysis is less than 0.05, hence ensuring statistical significance. The Correlation value is low, hence under 95% confidence we cannot conclude any of the above correlations are very strong.
+
+cor.test(data1$PerfScoreID, data1$EngagementSurvey)
+cor.test(data1$PerfScoreID, data1$EmpSatisfaction)
+cor.test(data1$PerfScoreID, data1$EmpStatusID)
+cor.test(data1$PerfScoreID, data1$DaysLateLast30)
+#All the P values for the above analysis is less than 0.05, hence ensuring statistical significance. The Correlation value of DaysLateLast30 is -0.75 which implies strong correlations, even EngagementSurvey has a correlation value of 0.57 implying good correlation.
+
+cor.test(data1$EmpSatisfaction, data1$EngagementSurvey)
+cor.test(data1$EmpSatisfaction, data1$PerfScoreID)
+cor.test(data1$EmpSatisfaction, data1$DaysLateLast30)
+#All the P values for the above analysis is less than 0.05, hence ensuring statistical significance. The Correlation value is low, hence under 95% confidence we cannot conclude any of the above correlations are very strong.
+
+cor.test(data1$SpecialProjectsCount, data1$Years_in_post)
+cor.test(data1$SpecialProjectsCount, data1$Salary)
+cor.test(data1$SpecialProjectsCount, data1$DeptID)
+#All the P values for the above analysis is less than 0.05, hence ensuring statistical significance. The Correlation value of Salary is 0.508 which implies strong correlations, even Department has a correlation value of 0.44 implying good correlation.
+
+cor.test(data1$MaritalStatusID, data1$RecruitID)
+#The P value is below 0.05 implying statistical significance. The Correlation value is low, hence no conclusions on correlation is inferred.
+
+cor.test(data1$RecruitID, data1$Years_in_post)
+#The P value is below 0.05 implying statistical significance. The Correlation value is low, hence no conclusions on correlation is inferred.
+
+#Further exploration to find statistical significance among different variable combinations. No strong correlations observed.
+cor.test(data1$MaritalStatusID, data1$Absences)
+cor.test(data1$MaritalStatusID, data1$PerfScoreID)
+cor.test(data1$GenderID, data1$PerfScoreID)
+cor.test(data1$RecruitID, data1$EngagementSurvey)
+cor.test(data1$Absences, data1$DeptID)
+cor.test(data1$EmpSatisfaction, data1$EngagementSurvey)
+cor.test(data1$EmpSatisfaction, data1$PerfScoreID)
+cor.test(data1$PerfScoreID, data1$EngagementSurvey)
+
+cor.test(data1$DeptID, data1$MaritalStatusID)
+cor.test(data1$DeptID, data1$GenderID)
+cor.test(data1$DeptID, data1$PerfScoreID)
+cor.test(data1$DeptID, data1$Salary)
+cor.test(data1$DeptID, data1$RecruitID)
+cor.test(data1$DeptID, data1$EngagementSurvey)
+cor.test(data1$DeptID, data1$EmpSatisfaction)
+cor.test(data1$DeptID, data1$EmpStatusID)
+cor.test(data1$DeptID, data1$RaceID)
+cor.test(data1$DeptID, data1$Absences)
+
+cor.test(data1$Salary, data1$GenderID)
+cor.test(data1$Salary, data1$PerfScoreID)
+cor.test(data1$Salary, data1$EngagementSurvey)
+cor.test(data1$Salary, data1$EmpSatisfaction)
+cor.test(data1$Salary, data1$RaceID)
+cor.test(data1$Salary, data1$MaritalStatusID)
+cor.test(data1$Salary, data1$RecruitID)
+cor.test(data1$Salary, data1$Absences)
+cor.test(data1$Salary, data1$PerfScoreID)
+
+```
+
+```{r, Initial exploratory Data Analysis}
+summary(data1)
+
+
+data1 %>% group_by(Department) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(Department) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+data1 %>% group_by(Department) %>% summarise(Mean.Salary=mean(Salary)) 
+data1 %>% group_by(Department) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(Department) %>% summarise(Mean.Spec.Proj=mean(SpecialProjectsCount))
+data1 %>% group_by(Department) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+#With respect to Department following are the observations
+#W Average Employee satisfaction- Lowest-Executive Office,highest-Software Engineering, followed by Sales.
+#Engagement Survey- Lowest- Sales, Highest- Executive office
+#Salary- Lowest- Production, Highest- Executive office
+#Absences- Lowest- Admin offices, Highest- Sales followed by IT/IS
+#Special Project- Lowest- Sales and executive offices (0), Highest- IT/IS
+#Years in Post- Lowest- IT/IS, Highest- Executive offices
+
+
+data1 %>% group_by(Sex) %>% summarise(Mean.Salary=mean(Salary))
+data1 %>% group_by(Sex) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(Sex) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+data1 %>% group_by(Sex) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(Sex) %>% summarise(Mean.Spec.Proj=mean(SpecialProjectsCount))
+data1 %>% group_by(Sex) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+#With respect to Sex following are the observations
+#W Average Employee satisfaction- Lowest-Male,highest-Female
+#Engagement Survey- Lowest- male, Highest- Female
+#Salary- Lowest- Female, Highest- male
+#Absences- Lowest- male, Highest- Female
+#Special Project- Lowest- Female, Highest-Female
+#Years in Post- Lowest- Female, Highest- Male
+
+data1 %>% group_by(ManagerName) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(ManagerName) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+data1 %>% group_by(ManagerName) %>% summarise(Mean.Salary=mean(Salary))
+data1 %>% group_by(ManagerName) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(ManagerName) %>% summarise(Mean.Spec.Proj=mean(SpecialProjectsCount))
+data1 %>% group_by(ManagerName) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+#With respect to Manager  following are the observations
+#W Average Employee satisfaction- Lowest-Male,highest-Female
+#Engagement Survey- Lowest- male, Highest- Female
+#Salary- Lowest- Female, Highest- male
+#Absences- Lowest- male, Highest- Female
+#Special Project- Lowest- Female, Highest-Female
+#Years in Post- Lowest- Female, Highest- Male
+
+data1 %>% group_by(PerformanceScore) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(PerformanceScore) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+data1 %>% group_by(PerformanceScore) %>% summarise(Mean.Salary=mean(Salary))
+data1 %>% group_by(PerformanceScore) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(PerformanceScore) %>% summarise(Mean.Spec.Proj=mean(SpecialProjectsCount))
+data1 %>% group_by(PerformanceScore) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+#With respect to Performance Score following are the observations
+#W Average Employee satisfaction- Lowest-PIP,highest-Exceeds, followed by Fully meets
+#Engagement Survey- Lowest- PIP, Highest- Exceeds
+#Salary- Lowest- PIP, Highest- Exceeds
+#Absences- Lowest- PIP, Highest- Needs Improvement
+#Special Project- Lowest- PIP, Highest-Fully meets
+#Years in Post- Lowest- PIP, Highest- Needs Improvement
+
+data1 %>% group_by(MaritalDesc) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(MaritalDesc) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+data1 %>% group_by(MaritalDesc) %>% summarise(Mean.Salary=mean(Salary))
+data1 %>% group_by(MaritalDesc) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(MaritalDesc) %>% summarise(Mean.Spec.Proj=mean(SpecialProjectsCount))
+data1 %>% group_by(MaritalDesc) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+#With respect to MaritalDesc following are the observations
+#W Average Employee satisfaction- Lowest-Married,highest-Widowed, followed by Single
+#Engagement Survey- Lowest- Married, Highest- Separated
+#Salary- Lowest-Separated (62) , Highest- Single(70s)
+#Absences- Lowest- Separated, Highest- Married/ Widowed
+#Special Project- Lowest- Separated, Highest-Married
+#Years in Post- Lowest- Single, Highest- Divorced
+
+data1 %>% group_by(RaceDesc) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(RaceDesc) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+data1 %>% group_by(RaceDesc) %>% summarise(Mean.Salary=mean(Salary))
+data1 %>% group_by(RaceDesc) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(RaceDesc) %>% summarise(Mean.Spec.Proj=mean(SpecialProjectsCount))
+data1 %>% group_by(RaceDesc) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+#With respect to RaceDesc following are the observations
+#W Average Employee satisfaction- Lowest-Hispanic(3),highest-American Indian, (4.67)
+#Engagement Survey- Lowest- Two or more races, Highest- Hispanic
+#Salary- Lowest-Two or more races (59) , Highest- Hispanic(83)
+#Absences- Lowest- Hispanic, Highest- Asian
+#Special Project- Lowest- American India/Hispanic/Two or more races, Highest-Black/ African American
+#Years in Post- Lowest- American Indian or Alaska Native/ Asian, Highest- Hispanic
+#Hispanic cannot be taken into account as there is only one Hispanic person in the records.
+
+data1 %>% group_by(RecruitmentSource) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(RecruitmentSource) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+data1 %>% group_by(RecruitmentSource) %>% summarise(Mean.Salary=mean(Salary))
+data1 %>% group_by(RecruitmentSource) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(RecruitmentSource) %>% summarise(Mean.Spec.Proj=mean(SpecialProjectsCount))
+data1 %>% group_by(RecruitmentSource) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+#With respect to RecruitmentSource following are the observations
+#W Average Employee satisfaction- Lowest-Website,highest- On-line Web application
+#Engagement Survey- Lowest- Indeed, Highest- On-line Web application 
+#Salary- Lowest-On-line Web application, Highest- Other 
+#Absences- Lowest- On-line Web application, Highest- Diversity Job Fair
+#Special Project- Lowest- On-line Web application, Highest-Employee Referral 
+#Years in Post- Lowest- Employee Referral , Highest- Other  
+
+data1 %>% group_by(EmploymentStatus) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(EmploymentStatus) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+data1 %>% group_by(EmploymentStatus) %>% summarise(Mean.Salary=mean(Salary))
+data1 %>% group_by(EmploymentStatus) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(EmploymentStatus) %>% summarise(Mean.Spec.Proj=mean(SpecialProjectsCount))
+data1 %>% group_by(EmploymentStatus) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+#With respect to EmploymentStatus following are the observations
+#W Average Employee satisfaction- No impact
+#Engagement Survey- Lowest- Terminated for Cause, Highest-Same
+#Salary- Lowest-Voluntarily Terminated , Highest- Same above 70 
+#Absences- Lowest- Active, Highest- Same
+#Special Project- Lowest- Voluntarily Terminated, Highest-Same
+#Years in Post- Lowest- Same, Highest- Voluntarily Terminated 
+
+data1 %>% group_by(SpecialProjectsCount) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(SpecialProjectsCount) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(SpecialProjectsCount) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+data1 %>% group_by(SpecialProjectsCount) %>% summarise(Mean.Salary=mean(Salary))
+data1 %>% group_by(SpecialProjectsCount) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+#With respect to SpecialProjectsCount following are the observations
+#Average Employee satisfaction- No impact
+#Average EngagementSurvey- No impact
+#Salary- Low for people without Special Project Count  
+#Absences- No impact
+#Years in Post- Avg 10.2
+#Cannot take special project 1 into consideration as there is only one person working on it.
+
+data1 %>% group_by(Position) %>% summarise(Mean.Absences=mean(Absences))
+data1 %>% group_by(Position) %>% summarise(Mean.Emp.Sat=mean(EmpSatisfaction))
+data1 %>% group_by(Position) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+view(data1 %>% group_by(Position) %>% summarise(Mean.Salary=mean(Salary)))
+data1 %>% group_by(Position) %>% summarise(Mean.Years.post=mean(Years_in_post))
+
+
+```
+
+```{r, Q1- What, if anything, increases the number of sick days that have been taken over the past year?}
+# Employee Satisfaction and Engagement Survey interaction with Absences
+ggplot(data1, aes(x = EmpSatisfaction, y= EngagementSurvey, color= Absences)) + geom_point()
+
+#If the employee satisfaction is greater than 3 and the Engagement survey is greater than 3, we observe the number of leaves tend to increase.
+
+#Department interaction with Absences
+ggplot(data1, aes(x = DeptID, y= Absences)) + geom_point()
+
+# Graph showing the interaction between Department and Absences, We see production has the highest number of absences, this is due to the fact that Production department has the highest number of employees.
+
+data1 %>% group_by(Department) %>% summarise(Mean.Absences=mean(Absences))
+
+#Taking avg of Absences per department to accurately compare between departments. Sales has the highest average of absences.
+
+ggplot(data1, aes(x=DeptID, y=Absences)) + geom_point() +
+stat_summary(aes(y = Absences,group=1), fun=mean, colour="red", geom="line",group=1)
+
+#Plotting the graph of Department vs Absences, and using a line graph to depict the avg of the absences, we can see although the total number of absences is high in Production, Sales department has higher absences average and hence a higher impact on absences.
+
+#Performance score interaction with Absences
+ggplot(data1, aes(x = PerformanceScore, y= Absences)) + geom_point()
+
+# Graph showing the interaction between Performance score and Absences, We see Fully meets has the highest number of absences, this is due to the fact that Fully meets has the highest number of employees.
+
+data1 %>% group_by(PerformanceScore) %>% summarise(Mean.Absences=mean(Absences))
+
+#Taking avg of Absences per category of Performance Score to accurately compare between Performance Score. Needs improvement has the highest average of absences.
+
+ggplot(data1, aes(x=PerformanceScore, y=Absences)) + geom_point() +
+stat_summary(aes(y = Absences,group=1), fun=mean, colour="red", geom="line",group=1)
+#Plotting the graph of Performance Score vs Absences, and using a line graph to depict the avg of the absences, we can see although the total number of absences is high in Fully meets, Needs improvement has higher absences average and hence a higher impact on absences.
+
+#Race Description interaction with Absences
+ggplot(data1, aes(x = RaceDesc, y= Absences)) + geom_point()
+
+# Graph showing the interaction between RaceDesc and Absences, We see Black or African American and White employees have the highest number of absences, this is due to the fact that Black or African American and White employees have the highest number of employees.
+
+data1 %>% group_by(RaceDesc) %>% summarise(Mean.Absences=mean(Absences))
+
+#Taking avg of Absences per category of RaceDesc to accurately compare between RaceDesc. Asian employees has the highest average of absences.
+
+ggplot(data1, aes(x=RaceDesc, y=Absences)) + geom_point() +
+stat_summary(aes(y = Absences,group=1), fun=mean, colour="red", geom="line",group=1)
+#Plotting the graph of RaceDesc vs Absences, and using a line graph to depict the avg of the absences, we can see although the total number of absences is high in Black or African American and White employees, Asian employees have higher absences average and hence a higher impact on absences.
+
+#Marital Description interaction with absences
+ggplot(data1, aes(x = MaritalDesc, y= Absences)) + geom_point()
+
+# Graph showing the interaction between MaritalDesc and Absences, We see single and Married employees have the highest number of absences, this is due to the fact that single and Married employees have the highest number of employees.
+
+data1 %>% group_by(MaritalDesc) %>% summarise(Mean.Absences=mean(Absences))
+
+#Taking avg of Absences per category of MaritalDesc to accurately compare between MaritalDesc. Married and Widowed employees have the highest average of absences. We are only taking into consideration married employees as the total number of widowed employees is just 8.
+
+ggplot(data1, aes(x=MaritalDesc, y=Absences)) + geom_point() +
+stat_summary(aes(y = Absences,group=1), fun=mean, colour="red", geom="line",group=1)
+#Plotting the graph of MaritalDesc vs Absences, and using a line graph to depict the avg of the absences,We observe Married (and widowed) employees have higher absences average and hence a higher impact on absences.
+
+#On analysis using avg absences with respect to Recuitment Sources, we observed that "Diversity Job Fair" had the highest number of leaves. But employees working through this source are just 11 in number, and based on knowledge about the industry we decided not not proceed with this variable impact.
+```
+
+```{r, Q2- What, if anything, increases the likelihood of someone leaving the organisation?}
+# Salary interaction with Absences
+ggplot(data1, aes(x = EmpStatusID , y= Salary)) + geom_point()
+
+# Graph showing the interaction between EmpStatusID and Salary, We see total salary for employees terminated for cause is the lowest, this is due to the fact that the number of employees terminated for cause is low.
+
+data1 %>% group_by(EmpStatusID) %>% summarise(Mean.Salary=mean(Salary))
+
+#Taking avg of Salary per category of EmpStatusID to accurately compare between EmpStatusID. Employees voluntarily terminated have the lowest average of salary compared to the other categories.
+
+ggplot(data1, aes(x=EmpStatusID, y=Salary)) + geom_point() +
+stat_summary(aes(y = Salary,group=1), fun=mean, colour="red", geom="line",group=1)
+#Plotting the graph of EmpStatusID vs Salary, and using a line graph to depict the avg of the Salaries, we observe that the employees voluntarily terminated had the lowest. Hence Salary has an impact on people leaving the organisation
+
+#Experiences (Years in post) interaction with Employee Status
+ggplot(data1, aes(x=EmpStatusID, y=Years_in_post)) + geom_point() +
+stat_summary(aes(y = Years_in_post,group=1), fun=mean, colour="red", geom="line",group=1)
+#Plotting the graph of EmpStatusID against Years_in_post, we observe that the employees voluntarily terminated have the highest years in post comparatively.
+
+#Special Project interaction with Employee Status
+ggplot(data1, aes(x=EmpStatusID, y=SpecialProjectsCount)) + geom_point() +
+stat_summary(aes(y = SpecialProjectsCount,group=1), fun=mean, colour="red", geom="line",group=1)
+# It is evident from the graphical representation, that employees who are voluntarily terminated have the least involvement in special projects compared to the other two categories.
+
+EmpStatus_dept <- table(data1$Department, data1$EmpStatusID)
+barplot(EmpStatus_dept, legend.text = TRUE, width = 2) 
+#The graph does not depict the accurate prediction of impact Department has on employee status, as this is the visual representation of total value and not averages. But we can see that there is some impact hence will be explored further on tableau. 
+
+EmpStatus_marital <- table(data1$MaritalDesc, data1$EmpStatusID)
+barplot(EmpStatus_marital, legend.text = TRUE, width = 2) 
+#Prediction not accurate, as averages not considered. To be further explored in tableau. 
+
+EmpStatus_race <- table(data1$RaceDesc, data1$EmpStatusID)
+barplot(EmpStatus_race, legend.text = TRUE, width = 2)
+#Prediction not accurate, as averages not considered.To be further explored in tableau.
+
+EmpStatus_Recruit <- table(data1$RecruitmentSource, data1$EmpStatusID)
+barplot(EmpStatus_Recruit, legend.text = TRUE, width = 2)
+#Prediction not accurate, as averages not considered.To be further explored in tableau.
+
+EmpStatus_Perf <- table(data1$PerformanceScore, data1$EmpStatusID)
+barplot(EmpStatus_Perf, legend.text = TRUE, width = 2)
+#Prediction not accurate, as averages not considered.To be further explored in tableau.
+```
+
+```{r, Q3- Are there any indicators of poor engagement scores?}
+# Employee Satisfaction interaction with  Engagement Survey 
+ggplot(data1, aes(x = EmpSatisfaction, y= EngagementSurvey)) + geom_point()
+# Increase in employee satisfaction we also see an increases the engagement. Strong correlation.
+
+#Department interaction with Engagement survey
+data1 %>% group_by(Department) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+
+ggplot(data1, aes(x=DeptID, y=EngagementSurvey)) + geom_point() +
+stat_summary(aes(y = EngagementSurvey,group=1), fun=mean, colour="red", geom="line",group=1)
+
+# As observed by the graph and the calculations, we observe that the Sales Department has the lowest Engagement score average compared to other departments.
+
+#Performance score interaction with Engagement survey
+data1 %>% group_by(PerformanceScore) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+
+ggplot(data1, aes(x=PerfScoreID, y=EngagementSurvey)) + geom_point() +
+stat_summary(aes(y = EngagementSurvey,group=1), fun=mean, colour="red", geom="line",group=1)
+
+#We observe an almost linear relationship between the two variables, a decrease in performance is also showing a decrease in engagement survey, showing a strong correlation.
+
+#Marital Desc interaction with Engagement Survey
+data1 %>% group_by(MaritalDesc) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+
+ggplot(data1, aes(x=MaritalDesc, y=EngagementSurvey)) + geom_point() +
+stat_summary(aes(y = EngagementSurvey,group=1), fun=mean, colour="red", geom="line",group=1)
+
+#We observe that in comparison married employees have lower engagement score. But the difference in scores isn't prominent.
+
+#Race Desc interaction with Engagement Survey
+data1 %>% group_by(RaceDesc) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+
+ggplot(data1, aes(x=RaceDesc, y=EngagementSurvey)) + geom_point() +
+stat_summary(aes(y = EngagementSurvey,group=1), fun=mean, colour="red", geom="line",group=1)
+
+#We observe that "Two or more races" have the lowest engagement survey rating compared to the employees from other races.
+
+#Recruitment Sources interaction with Engagement survey
+data1 %>% group_by(RecruitmentSource) %>% summarise(Mean.Eng.Sur=mean(EngagementSurvey))
+
+ggplot(data1, aes(x=RecruitID, y=EngagementSurvey)) + geom_point() +
+stat_summary(aes(y = EngagementSurvey,group=1), fun=mean, colour="red", geom="line",group=1)
+
+#We observe the lowest engagement survey average is for employees hired through Indeed, with a score of 3.99 compared to the other variables.
+
+```
+
+```{r, Q4- Corrected for seniority, expertise and experience, do we have a gender pay gap?}
+#Impact of Gender and Salary
+ggplot(data1, aes(x = GenderID, y= Salary)) + geom_point()
+# From the graph it is evident that men are getting paid more than women when all the other variables are taken as constants.
+
+#Interaction of Marital Disc with Salary and Gender
+ggplot(data1, aes(x=MaritalStatusID, y=Salary, color = GenderID)) + geom_jitter(width = .1) +
+stat_summary(aes(y = Salary,group=1), fun=mean, colour="red", geom="line",group=1)
+#Somme relation between Marital Status and Salary with respect to gender observed, needs further exploration on Tableau.
+
+#Interaction of Performance score with Salary and Gender
+ggplot(data1, aes(x=PerfScoreID, y=Salary, color = GenderID)) + geom_jitter(width = .1) +
+stat_summary(aes(y = Salary,group=1), fun=mean, colour="red", geom="line",group=1)
+#Somme relation between Department and Salary with respect to gender observed, needs further exploration on Tableau. The salary appears to be higher with better performance.
+
+#Interaction of Department with salary and gender
+ggplot(data1, aes(x=DeptID, y=Salary, color = GenderID)) + geom_jitter(width = .1) +
+stat_summary(aes(y = Salary,group=1), fun=mean, colour="red", geom="line",group=1)
+#Somme relation between Department and Salary with respect to gender observed, needs further exploration on Tableau. Production Department has the lowest average salary compared to other departments.
+
+#Interaction of Years in Post with salary and gender
+ggplot(data1, aes(x=Years_in_post, y=Salary, color = GenderID)) + geom_jitter(width = .1) +
+stat_summary(aes(y = Salary,group=1), fun=mean, colour="red", geom="line",group=1)
+#Somme relation between Years_in_post and Salary with respect to gender observed, needs further exploration on Tableau.
+
+#Interaction of Years in Post with salary and gender
+ggplot(data1, aes(x=Position, y=Salary, color = GenderID)) + geom_jitter(width = .1) +
+stat_summary(aes(y = Salary,group=1), fun=mean, colour="red", geom="line",group=1)
+#Somme relation between Position and Salary with respect to gender observed, needs further exploration on Tableau.
+
+#Interaction of Race Disc with salary and gender
+ggplot(data1, aes(x=RaceDesc, y=Salary, color = GenderID)) + geom_jitter(width = .1) +
+stat_summary(aes(y = Salary,group=1), fun=mean, colour="red", geom="line",group=1)
+#Somme relation between Race and Salary with respect to gender observed, needs further exploration on Tableau.
+
+#Interaction of Recruitment Source with salary and gender
+ggplot(data1, aes(x=RecruitID, y=Salary, color = GenderID)) + geom_jitter(width = .1) +
+stat_summary(aes(y = Salary,group=1), fun=mean, colour="red", geom="line",group=1)
+# Does not have an impact on the salary or Gender 
+```
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
