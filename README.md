@@ -8,4 +8,4 @@ THe task is to answer 4 queries:
 3. Are there any indicators of poor engagement scores?
 4. Corrected for seniority, expertise and experience, do we have a gender pay gap?
 
-There are two .twb files which will provide you all the information.
+The dashboards are available in https://public.tableau.com/app/profile/vishwanath.mankala
